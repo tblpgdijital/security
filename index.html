@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#003B6A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Güvenlik">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <title>TUI BLUE Palm Garden Güvenlik Portalı</title>
+
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f8fc;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+    #appFrame{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
+    #pushBtn{
+      position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));
+      z-index:99999;border:0;border-radius:999px;padding:12px 16px;
+      background:#003B6A;color:white;font-weight:800;box-shadow:0 10px 28px rgba(0,59,106,.28);
+      display:none
+    }
+    #installTip{
+      position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
+      z-index:100000;background:#fff;color:#17384c;border:1px solid #cfe0ea;border-radius:16px;
+      padding:13px 42px 13px 14px;box-shadow:0 12px 34px rgba(0,59,106,.16);font-size:13px;line-height:1.45;
+      display:none
+    }
+    #installTip b{color:#003B6A}
+    #tipClose{position:absolute;right:8px;top:7px;width:30px;height:30px;border:0;border-radius:10px;background:#eef4f8;color:#31596e;font-size:19px}
+    #status{
+      position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);
+      z-index:100001;background:rgba(0,59,106,.94);color:#fff;padding:7px 11px;border-radius:999px;
+      font-size:11px;font-weight:700;display:none
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BURAYA MEVCUT GOOGLE APPS SCRIPT WEB APP /exec URL'SİNİ YAZIN -->
+  <iframe id="appFrame"
+    src="BURAYA_APPS_SCRIPT_EXEC_URL"
+    allow="clipboard-read; clipboard-write; camera; microphone">
+  </iframe>
+
+  <button id="pushBtn" type="button">🔔 Bildirimleri Aç</button>
+
+  <div id="installTip">
+    <button id="tipClose" type="button">×</button>
+    <b>iPhone:</b> Bildirim alabilmek için önce bu sayfayı <b>Ana Ekrana Ekle</b>, sonra ana ekrandaki Güvenlik ikonundan aç ve “Bildirimleri Aç” butonuna dokun.
+  </div>
+
+  <div id="status"></div>
+
+<script>
+/* ==========================================================
+   1) BURAYA ONESIGNAL APP ID YAZIN
+   ========================================================== */
+const ONESIGNAL_APP_ID = 'BURAYA_ONESIGNAL_APP_ID';
+
+let currentEducationId = '';
+let oneSignalApi = null;
+
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+}
+
+function showStatus(text, ms=2500){
+  const e=document.getElementById('status');
+  e.textContent=text;e.style.display='block';
+  clearTimeout(showStatus.t);
+  showStatus.t=setTimeout(()=>e.style.display='none',ms);
+}
+
+function maybeShowIOSInstallTip(){
+  if(isIOS() && !isStandalone() && localStorage.getItem('guv_install_tip_closed')!=='1'){
+    document.getElementById('installTip').style.display='block';
+  }
+}
+document.getElementById('tipClose').onclick=()=>{
+  document.getElementById('installTip').style.display='none';
+  localStorage.setItem('guv_install_tip_closed','1');
+};
+
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+window.OneSignalDeferred.push(async function(OneSignal) {
+  oneSignalApi = OneSignal;
+
+  await OneSignal.init({
+    appId: ONESIGNAL_APP_ID,
+    serviceWorkerPath: 'OneSignalSDKWorker.js',
+    serviceWorkerParam: { scope: './' },
+    autoResubscribe: true,
+    notificationClickHandlerMatch: 'origin',
+    notificationClickHandlerAction: 'focus'
+  });
+
+  if(currentEducationId){
+    try{ await OneSignal.login(currentEducationId); }catch(e){ console.error(e); }
+  }
+
+  const btn=document.getElementById('pushBtn');
+  const supported = 'Notification' in window && 'serviceWorker' in navigator;
+
+  if(supported && Notification.permission !== 'granted'){
+    if(!isIOS() || isStandalone()) btn.style.display='block';
+  }
+
+  if(Notification.permission === 'granted'){
+    btn.style.display='none';
+  }
+
+  btn.onclick=async()=>{
+    try{
+      if(isIOS() && !isStandalone()){
+        maybeShowIOSInstallTip();
+        showStatus('Önce Ana Ekrana ekleyin');
+        return;
+      }
+
+      if(currentEducationId){
+        await OneSignal.login(currentEducationId);
+      }
+
+      await OneSignal.Notifications.requestPermission();
+
+      if(Notification.permission === 'granted'){
+        btn.style.display='none';
+        showStatus('Bildirimler açıldı ✓');
+      }
+    }catch(e){
+      console.error(e);
+      showStatus('Bildirim izni açılamadı',3500);
+    }
+  };
+});
+
+/*
+ * Apps Script iframe giriş yaptıktan sonra Eğitim_ID bilgisini parent'a yollar.
+ * Bu bilgi OneSignal external_id olur.
+ */
+window.addEventListener('message', async (event)=>{
+  const d=event.data || {};
+  if(d.type !== 'GUV_SECURITY_USER') return;
+
+  currentEducationId = String(d.educationId || '').trim();
+  if(!currentEducationId) return;
+
+  if(oneSignalApi){
+    try{
+      await oneSignalApi.login(currentEducationId);
+      if('Notification' in window && Notification.permission !== 'granted'){
+        if(!isIOS() || isStandalone()){
+          document.getElementById('pushBtn').style.display='block';
+        }
+      }
+    }catch(e){ console.error('OneSignal login error',e); }
+  }
+});
+
+maybeShowIOSInstallTip();
+</script>
+</body>
+</html>
