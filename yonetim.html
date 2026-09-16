@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#003B6A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="TBPG Güvenlik">
+  <meta name="format-detection" content="telephone=no">
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="icon" href="./icon-192.png">
+
+  <title>TUI BLUE Palm Garden Güvenlik Yönetim Merkezi</title>
+  <meta name="tbpg-build" content="security-management-20260916-v1">
+
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{
+      margin:0;width:100%;height:100%;overflow:hidden;
+      background:#f3f8fc;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    #appFrame{
+      position:fixed;inset:0;width:100%;height:100%;
+      border:0;background:#fff;
+    }
+    #boot{
+      position:fixed;inset:0;z-index:99998;
+      display:flex;align-items:center;justify-content:center;
+      background:
+        radial-gradient(circle at 18% 12%,rgba(37,168,215,.18),transparent 28%),
+        linear-gradient(145deg,#002A4D 0%,#003B6A 58%,#00558E 100%);
+      color:#fff;
+      transition:opacity .28s ease,visibility .28s ease;
+    }
+    #boot.hide{opacity:0;visibility:hidden;pointer-events:none}
+    .bootBox{text-align:center;padding:28px;width:min(92vw,430px)}
+    .bootIcon{
+      width:78px;height:78px;border-radius:24px;margin:0 auto 16px;
+      display:grid;place-items:center;background:#fff;color:#003B6A;
+      box-shadow:0 18px 48px rgba(0,0,0,.22);
+    }
+    .bootIcon svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .bootTitle{font-weight:900;font-size:22px;letter-spacing:-.02em}
+    .bootSub{opacity:.84;font-size:13px;margin-top:6px}
+    .bootMode{
+      display:inline-flex;align-items:center;gap:7px;
+      margin-top:13px;padding:7px 11px;border-radius:999px;
+      background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);
+      font-size:11px;font-weight:900;letter-spacing:.04em;
+    }
+    .bootLine{
+      width:190px;height:5px;background:rgba(255,255,255,.15);
+      border-radius:20px;overflow:hidden;margin:20px auto 0;
+    }
+    .bootLine:after{
+      content:"";display:block;width:45%;height:100%;background:#55D4EE;
+      border-radius:inherit;animation:move 1.15s ease-in-out infinite;
+    }
+    @keyframes move{from{transform:translateX(-110%)}to{transform:translateX(330%)}}
+
+    #pushBtn{
+      position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));
+      z-index:99999;border:0;border-radius:999px;padding:12px 16px;
+      background:#003B6A;color:#fff;font-weight:900;
+      box-shadow:0 10px 28px rgba(0,59,106,.28);display:none;cursor:pointer;
+    }
+    #installTip{
+      position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
+      z-index:100000;background:#fff;color:#17384c;border:1px solid #cfe0ea;
+      border-radius:16px;padding:13px 42px 13px 14px;
+      box-shadow:0 12px 34px rgba(0,59,106,.16);
+      font-size:13px;line-height:1.5;display:none;
+    }
+    #installTip b{color:#003B6A}
+    #tipClose{
+      position:absolute;right:8px;top:7px;width:30px;height:30px;
+      border:0;border-radius:10px;background:#eef4f8;color:#31596e;font-size:19px;
+    }
+    #status{
+      position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));
+      transform:translateX(-50%);z-index:100001;
+      background:rgba(0,59,106,.96);color:#fff;padding:8px 12px;
+      border-radius:999px;font-size:11px;font-weight:800;display:none;
+      max-width:calc(100% - 24px);text-align:center;
+      box-shadow:0 8px 22px rgba(0,59,106,.18);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="boot">
+    <div class="bootBox">
+      <div class="bootIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M4 19V9"></path>
+          <path d="M10 19V4"></path>
+          <path d="M16 19v-7"></path>
+          <path d="M22 19H2"></path>
+        </svg>
+      </div>
+      <div class="bootTitle">TUI BLUE Palm Garden</div>
+      <div class="bootSub">Güvenlik Portalı hazırlanıyor...</div>
+      <div class="bootMode">YÖNETİM MERKEZİ</div>
+      <div class="bootLine"></div>
+    </div>
+  </div>
+
+  <iframe
+    id="appFrame"
+    title="TUI BLUE Palm Garden Güvenlik Yönetim Merkezi"
+    allow="clipboard-read; clipboard-write; camera; microphone; fullscreen; autoplay"
+    allowfullscreen>
+  </iframe>
+
+  <button id="pushBtn" type="button">🔔 Bildirimleri Aç</button>
+
+  <div id="installTip">
+    <button id="tipClose" type="button" aria-label="Kapat">×</button>
+    <b>iPhone / iPad:</b> Portalı uygulama gibi kullanmak ve bildirim almak için
+    Safari'de <b>Paylaş → Ana Ekrana Ekle → Ekle</b> adımlarını kullanın.
+    Daha sonra ana ekrandaki <b>TBPG Güvenlik</b> ikonundan açıp
+    <b>“Bildirimleri Aç”</b> butonuna dokunun.
+  </div>
+
+  <div id="status" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // Güvenlik Portalı mevcut canlı Apps Script dağıtımı.
+  // Gizli anahtar içermez; GitHub Pages üzerinde public olarak bulunabilir.
+  const APP_URL = 'https://script.google.com/macros/s/AKfycbx5GzuXdyc7W_OJNSzE6Mhshqvd6TmhuL580_NdwuCbSOIUVnw_QPVzrSTEDIvo6sf3Gg/exec';
+  const ONESIGNAL_APP_ID = '42b7220b-661b-45f3-907c-e54b9ea99aec';
+
+  const frame = document.getElementById('appFrame');
+  const boot = document.getElementById('boot');
+  const pushBtn = document.getElementById('pushBtn');
+  const installTip = document.getElementById('installTip');
+
+  let currentEducationId = '';
+  let oneSignalApi = null;
+  let pendingSecurityUser = null;
+
+  function isIOS(){
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function isStandalone(){
+    return window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+  }
+
+  function showStatus(text, ms = 2800){
+    const e = document.getElementById('status');
+    e.textContent = String(text || '');
+    e.style.display = 'block';
+    clearTimeout(showStatus.timer);
+    showStatus.timer = setTimeout(() => { e.style.display = 'none'; }, ms);
+  }
+
+  function maybeShowIOSInstallTip(){
+    if(
+      isIOS() &&
+      !isStandalone() &&
+      localStorage.getItem('guv_install_tip_closed') !== '1'
+    ){
+      installTip.style.display = 'block';
+    }
+  }
+
+  document.getElementById('tipClose').addEventListener('click', () => {
+    installTip.style.display = 'none';
+    localStorage.setItem('guv_install_tip_closed', '1');
+  });
+
+  function portalUrl(mode){
+    const targetMode = mode === 'personel' ? 'personel' : 'yonetim';
+    try{
+      const u = new URL(APP_URL);
+      u.searchParams.set('portal', targetMode);
+      u.searchParams.set('embedded', '1');
+      return u.toString();
+    }catch(_){
+      const sep = APP_URL.includes('?') ? '&' : '?';
+      return APP_URL + sep + 'portal=' + encodeURIComponent(targetMode) + '&embedded=1';
+    }
+  }
+
+  // yonetim.html her zaman Yönetim Merkezi ile açılır.
+  frame.src = portalUrl('yonetim');
+
+  frame.addEventListener('load', () => {
+    setTimeout(() => boot.classList.add('hide'), 220);
+  });
+
+  // Türkçe karakter kaynaklı YONETİM / YÖNETİM farkına karşı güvenli normalizasyon.
+  // Burada toLocaleUpperCase('tr-TR') kullanılmaz.
+  function normalizePortalMode(value){
+    const v = String(value || '').trim().toUpperCase();
+    if(v === 'YONETIM' || v === 'YÖNETİM' || v === 'MANAGEMENT') return 'yonetim';
+    return 'personel';
+  }
+
+  async function bindSecurityUser(payload){
+    if(!payload || !payload.educationId) return;
+    pendingSecurityUser = payload;
+    currentEducationId = String(payload.educationId || '').trim();
+    if(!currentEducationId) return;
+
+    if(!oneSignalApi){
+      refreshPushButton();
+      return;
+    }
+
+    try{
+      await oneSignalApi.login(currentEducationId);
+      try{
+        await oneSignalApi.User.addTags({
+          portal_guvenlik: '1',
+          guvenlik_merkez: 'yonetim'
+        });
+      }catch(_){}
+      refreshPushButton();
+    }catch(error){
+      console.error('OneSignal kullanıcı eşleştirme hatası:', error);
+    }
+  }
+
+  function refreshPushButton(){
+    const supported =
+      ('Notification' in window) &&
+      ('serviceWorker' in navigator);
+
+    if(!supported){
+      pushBtn.style.display = 'none';
+      return;
+    }
+
+    if(isIOS() && !isStandalone()){
+      pushBtn.style.display = 'none';
+      maybeShowIOSInstallTip();
+      return;
+    }
+
+    if(Notification.permission === 'granted'){
+      pushBtn.style.display = 'none';
+      return;
+    }
+
+    pushBtn.style.display = 'block';
+    pushBtn.textContent =
+      Notification.permission === 'denied'
+        ? '🔕 Bildirim İzni Kapalı'
+        : '🔔 Bildirimleri Aç';
+  }
+
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal){
+    oneSignalApi = OneSignal;
+
+    try{
+      await OneSignal.init({
+        appId: ONESIGNAL_APP_ID,
+        serviceWorkerPath: '/security/OneSignalSDKWorker.js',
+        serviceWorkerParam: { scope: '/security/' },
+        autoResubscribe: true
+      });
+
+      if(pendingSecurityUser){
+        await bindSecurityUser(pendingSecurityUser);
+      }
+
+      refreshPushButton();
+    }catch(error){
+      console.error('OneSignal başlatma hatası:', error);
+      showStatus('Bildirim sistemi ayarı kontrol edilmeli', 4200);
+    }
+  });
+
+  pushBtn.addEventListener('click', async () => {
+    try{
+      if(isIOS() && !isStandalone()){
+        maybeShowIOSInstallTip();
+        showStatus('Önce Ana Ekrana ekleyin');
+        return;
+      }
+
+      if(!oneSignalApi){
+        showStatus('Bildirim sistemi hazırlanıyor');
+        return;
+      }
+
+      if(Notification.permission === 'denied'){
+        showStatus(
+          'Bildirim izni tarayıcıda engelli. Site ayarlarından Bildirimler bölümünü açın.',
+          6000
+        );
+        return;
+      }
+
+      if(currentEducationId){
+        await oneSignalApi.login(currentEducationId);
+      }
+
+      await oneSignalApi.Notifications.requestPermission();
+
+      if(Notification.permission === 'granted'){
+        try{
+          if(oneSignalApi.User && oneSignalApi.User.PushSubscription){
+            await oneSignalApi.User.PushSubscription.optIn();
+          }
+        }catch(_){}
+
+        pushBtn.style.display = 'none';
+        showStatus('Güvenlik bildirimleri açıldı ✓', 3500);
+      }else{
+        refreshPushButton();
+        showStatus('Bildirim izni verilmedi', 3000);
+      }
+    }catch(error){
+      console.error('Bildirim izni hatası:', error);
+      refreshPushButton();
+      showStatus('Bildirim izni açılamadı', 3500);
+    }
+  });
+
+  window.addEventListener('message', async (event) => {
+    const data = event.data || {};
+
+    // Eğitim Portalındaki ayrım mantığı ile aynı yaklaşım:
+    // Hedef URL mesajdan alınmaz; yalnız sabit iki merkez arasında geçilir.
+    if(data.type === 'TBPG_SECURITY_PORTAL_SWITCH'){
+      if(String(data.portal || '').toUpperCase() !== 'GUVENLIK') return;
+
+      const mode = normalizePortalMode(data.mode);
+
+      if(mode === 'personel'){
+        showStatus('Güvenlik Personel Merkezi açılıyor...', 1500);
+        window.location.href = './';
+      }else{
+        showStatus('Yönetim Merkezi açılıyor...', 1200);
+        frame.src = portalUrl('yonetim');
+      }
+      return;
+    }
+
+    // Apps Script giriş yaptıktan sonra OneSignal external_id = Eğitim ID.
+    if(data.type === 'GUV_SECURITY_USER'){
+      // Mesaj normalde portal iframe'inden gelir. HtmlService sandbox yapısında
+      // event.source tarayıcıya göre ara pencere olabildiği için payload'dan URL alınmaz.
+      await bindSecurityUser(data);
+      return;
+    }
+
+    if(data.type === 'GUV_SECURITY_LOGOUT'){
+      currentEducationId = '';
+      pendingSecurityUser = null;
+      pushBtn.style.display = 'none';
+    }
+  });
+
+  maybeShowIOSInstallTip();
+})();
+</script>
+</body>
+</html>
