@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#003B6A">
   <meta name="robots" content="noindex,nofollow">
   <title>TUI BLUE Palm Garden • Hızlı Form Girişi</title>
+  <!-- V4.0.15 top-window Apps Script bridge fix -->
   <link rel="icon" href="/security/icon-192.png">
   <style>
     *{box-sizing:border-box}
@@ -50,6 +51,7 @@
   const SESSION_STORAGE_KEY='guv_security_portal_session_v4018';
   const SESSION_MAX_MS=14*24*60*60*1000;
   const frame=document.getElementById('appFrame');
+  const BRIDGE_ID='GUVFORM-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);
   const boot=document.getElementById('boot');
   const fallback=document.getElementById('fallback');
 
@@ -91,32 +93,31 @@
     try{localStorage.removeItem(SESSION_STORAGE_KEY)}catch(e){}
   }
 
-  function sendView(){
-    if(!frame.contentWindow)return;
-    try{
-      frame.contentWindow.postMessage({type:'TBPG_SECURITY_VIEW',view:'formdesk'},'*');
-    }catch(e){}
-  }
-
   function hideBoot(){
     boot.classList.add('hide');
     setTimeout(()=>boot.style.display='none',220);
   }
 
   window.addEventListener('message',event=>{
-    if(event.source!==frame.contentWindow)return;
+    // Apps Script HtmlService, GitHub iframe'inin içinde ek bir googleusercontent
+    // sandbox penceresi kullanabilir. Bu nedenle event.source doğrudan appFrame
+    // olmak zorunda değildir; origin + tek kullanımlık sayfa kanal kimliği doğrulanır.
     if(!trustedAppsOrigin(event.origin))return;
     const data=event.data||{};
+    if(String(data.bridgeId||'')!==BRIDGE_ID)return;
 
     if(data.type==='GUV_SECURITY_SESSION_GET'){
       const s=readSession();
-      frame.contentWindow.postMessage({
-        type:'GUV_SECURITY_SESSION_RESPONSE',
-        requestId:String(data.requestId||''),
-        token:s?.token||'',
-        expiresAt:s?.expiresAt||0,
-        view:'formdesk'
-      },'*');
+      try{
+        event.source.postMessage({
+          type:'GUV_SECURITY_SESSION_RESPONSE',
+          requestId:String(data.requestId||''),
+          token:s?.token||'',
+          expiresAt:s?.expiresAt||0,
+          view:'formdesk',
+          bridgeId:BRIDGE_ID
+        },event.origin);
+      }catch(e){}
       return;
     }
 
@@ -134,22 +135,21 @@
       hideBoot();
     }
   });
-
   frame.addEventListener('load',()=>{
-    sendView();
-    setTimeout(sendView,180);
-    setTimeout(sendView,650);
-    setTimeout(sendView,1400);
+    // Form görünümü server-side enjekte edildiği için ayrıca view mesajı beklenmez.
+    // Kullanıcı oturumu yoksa Apps Script giriş ekranının görünmesi için kabuk
+    // kısa süre sonra mutlaka kaldırılır.
+    setTimeout(hideBoot,900);
     setTimeout(()=>{
       if(boot.style.display!=='none'){
         fallback.style.display='block';
-        setTimeout(()=>fallback.style.display='none',2600);
+        setTimeout(()=>fallback.style.display='none',2200);
       }
-    },2200);
+    },1800);
   });
 
   // Listener önce kurulur; ardından Apps Script yüklenir.
-  frame.src=APP_URL+'?source=form-desk&t='+Date.now();
+  frame.src=APP_URL+'?source=form-desk&view=formdesk&bridge='+encodeURIComponent(BRIDGE_ID)+'&t='+Date.now();
 })();
 </script>
 </body>
