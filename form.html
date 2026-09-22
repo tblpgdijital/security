@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#003B6A">
+  <meta name="robots" content="noindex,nofollow">
+  <title>TUI BLUE Palm Garden • Hızlı Form Girişi</title>
+  <link rel="icon" href="/security/icon-192.png">
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#F3F8FC;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+    #appFrame{position:fixed;inset:0;width:100%;height:100vh;height:100dvh;border:0;background:#fff}
+    #boot{
+      position:fixed;inset:0;z-index:20;display:grid;place-items:center;
+      background:
+        radial-gradient(circle at 18% 8%,rgba(22,143,192,.14),transparent 30%),
+        linear-gradient(145deg,#F8FCFF,#EEF6FB 58%,#E8F2F8);
+      color:#003B6A;transition:opacity .2s ease
+    }
+    #boot.hide{opacity:0;pointer-events:none}
+    .bootbox{width:min(92vw,430px);text-align:center;background:#fff;border:1px solid #D5E5ED;border-radius:22px;padding:28px;box-shadow:0 24px 70px rgba(0,59,106,.13)}
+    .booticon{width:62px;height:62px;border-radius:18px;margin:0 auto 14px;display:grid;place-items:center;background:#003B6A;color:#fff;font-size:29px;font-weight:900}
+    .boottitle{font-size:20px;font-weight:900}.bootsub{font-size:12px;color:#6E8491;margin-top:5px}
+    .line{height:5px;border-radius:999px;background:#E4EEF3;margin-top:18px;overflow:hidden}.line i{display:block;width:38%;height:100%;background:#168FC0;border-radius:999px;animation:load 1s ease-in-out infinite alternate}
+    @keyframes load{to{transform:translateX(165%)}}
+    #fallback{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:25;display:none;background:#fff;border:1px solid #D8E6ED;color:#385A6B;border-radius:999px;padding:8px 12px;font-size:11px;font-weight:800;box-shadow:0 7px 20px rgba(0,59,106,.09)}
+  </style>
+</head>
+<body>
+  <div id="boot">
+    <div class="bootbox">
+      <div class="booticon">+</div>
+      <div class="boottitle">Hızlı Form Girişi</div>
+      <div class="bootsub">Formlar hazırlanıyor • TUI BLUE Palm Garden Güvenlik</div>
+      <div class="line"><i></i></div>
+    </div>
+  </div>
+  <div id="fallback">Form ekranı hazırlanıyor…</div>
+  <iframe id="appFrame"
+    title="TUI BLUE Palm Garden Hızlı Form Girişi"
+    allow="clipboard-read; clipboard-write; camera; microphone; fullscreen"
+    allowfullscreen></iframe>
+
+<script>
+(() => {
+  'use strict';
+
+  const APP_URL='https://script.google.com/macros/s/AKfycbx5GzuXdyc7W_OJNSzE6Mhshqvd6TmhuL580_NdwuCbSOIUVnw_QPVzrSTEDIvo6sf3Gg/exec';
+  const SESSION_STORAGE_KEY='guv_security_portal_session_v4018';
+  const SESSION_MAX_MS=14*24*60*60*1000;
+  const frame=document.getElementById('appFrame');
+  const boot=document.getElementById('boot');
+  const fallback=document.getElementById('fallback');
+
+  function trustedAppsOrigin(origin){
+    origin=String(origin||'');
+    return origin==='https://script.google.com' ||
+      /^https:\/\/[a-z0-9.-]*script\.googleusercontent\.com$/i.test(origin);
+  }
+
+  function readSession(){
+    try{
+      const raw=localStorage.getItem(SESSION_STORAGE_KEY);
+      if(!raw)return null;
+      const x=JSON.parse(raw);
+      const token=String(x?.token||'').trim();
+      const expiresAt=Number(x?.expiresAt||0);
+      if(!token||!expiresAt||expiresAt<=Date.now()){
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        return null;
+      }
+      return {token,expiresAt};
+    }catch(e){return null}
+  }
+
+  function saveSession(token,expiresAt){
+    token=String(token||'').trim();
+    expiresAt=Number(expiresAt||0);
+    if(!token)return;
+    const max=Date.now()+SESSION_MAX_MS;
+    if(!expiresAt||expiresAt>max)expiresAt=max;
+    if(expiresAt<=Date.now())return;
+    try{
+      localStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify({token,expiresAt,savedAt:Date.now()}));
+      if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+    }catch(e){}
+  }
+
+  function clearSession(){
+    try{localStorage.removeItem(SESSION_STORAGE_KEY)}catch(e){}
+  }
+
+  function sendView(){
+    if(!frame.contentWindow)return;
+    try{
+      frame.contentWindow.postMessage({type:'TBPG_SECURITY_VIEW',view:'formdesk'},'*');
+    }catch(e){}
+  }
+
+  function hideBoot(){
+    boot.classList.add('hide');
+    setTimeout(()=>boot.style.display='none',220);
+  }
+
+  window.addEventListener('message',event=>{
+    if(event.source!==frame.contentWindow)return;
+    if(!trustedAppsOrigin(event.origin))return;
+    const data=event.data||{};
+
+    if(data.type==='GUV_SECURITY_SESSION_GET'){
+      const s=readSession();
+      frame.contentWindow.postMessage({
+        type:'GUV_SECURITY_SESSION_RESPONSE',
+        requestId:String(data.requestId||''),
+        token:s?.token||'',
+        expiresAt:s?.expiresAt||0,
+        view:'formdesk'
+      },'*');
+      return;
+    }
+
+    if(data.type==='GUV_SECURITY_SESSION_SET'){
+      saveSession(data.token,data.expiresAt);
+      return;
+    }
+
+    if(data.type==='GUV_SECURITY_SESSION_CLEAR'){
+      clearSession();
+      return;
+    }
+
+    if(data.type==='TBPG_SECURITY_VIEW_ACK' || data.type==='TBPG_SECURITY_FORM_DESK_READY'){
+      hideBoot();
+    }
+  });
+
+  frame.addEventListener('load',()=>{
+    sendView();
+    setTimeout(sendView,180);
+    setTimeout(sendView,650);
+    setTimeout(sendView,1400);
+    setTimeout(()=>{
+      if(boot.style.display!=='none'){
+        fallback.style.display='block';
+        setTimeout(()=>fallback.style.display='none',2600);
+      }
+    },2200);
+  });
+
+  // Listener önce kurulur; ardından Apps Script yüklenir.
+  frame.src=APP_URL+'?source=form-desk&t='+Date.now();
+})();
+</script>
+</body>
+</html>
